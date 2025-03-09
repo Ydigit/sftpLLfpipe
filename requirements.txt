@@ -1,0 +1,5 @@
+paramiko>=2.7.2
+tk>=0.1.0
+pillow>=8.0.0
+ffmpeg-python>=0.2.0
+numpy>=1.19.0

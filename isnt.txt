@@ -1,0 +1,1 @@
+PS R:\Nerfs\getvid> python -m video_to_nerf.app
