@@ -53,6 +53,137 @@ class VideoToNerfApp:
         # FPS setting
         ttk.Label(frame, text="Frames per second:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
         ttk.Entry(frame, textvariable=self.fps, width=10).grid(row=2, column=1, sticky="w", padx=5, pady=5)
+<<<<<<< HEAD
+=======
+    def create_input_frame(self):
+        frame = ttk.LabelFrame(self.root, text="Input Settings")
+        frame.pack(fill="x", padx=10, pady=5)
+
+        # Input type selection
+        ttk.Label(frame, text="Input Type:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Radiobutton(frame, text="Video", variable=self.input_type, value="video", command=self.update_input_type).grid(row=0, column=1, sticky="w", padx=5, pady=5)
+        ttk.Radiobutton(frame, text="Photos", variable=self.input_type, value="photos", command=self.update_input_type).grid(row=0, column=2, sticky="w", padx=5, pady=5)
+
+        # Video selection
+        self.video_frame = ttk.Frame(frame)
+        self.video_frame.grid(row=1, column=0, columnspan=3, sticky="w", padx=5, pady=5)
+        ttk.Label(self.video_frame, text="Video File:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Entry(self.video_frame, textvariable=self.video_path, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(self.video_frame, text="Browse", command=self.browse_video).grid(row=0, column=2, padx=5, pady=5)
+
+        # Photos selection
+        self.photos_frame = ttk.Frame(frame)
+        self.photos_frame.grid(row=2, column=0, columnspan=3, sticky="w", padx=5, pady=5)
+        ttk.Label(self.photos_frame, text="Photo Files:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Button(self.photos_frame, text="Select Photos", command=self.browse_photos).grid(row=0, column=1, padx=5, pady=5)
+        self.photos_frame.grid_remove()  # Hide by default
+
+        # Output directory
+        ttk.Label(frame, text="Output Directory:").grid(row=3, column=0, sticky="w", padx=5, pady=5)
+        ttk.Entry(frame, textvariable=self.output_dir, width=50).grid(row=3, column=1, padx=5, pady=5)
+        ttk.Button(frame, text="Browse", command=self.browse_output_dir).grid(row=3, column=2, padx=5, pady=5)
+
+        # FPS setting (only for video)
+        self.fps_frame = ttk.Frame(frame)
+        self.fps_frame.grid(row=4, column=0, columnspan=3, sticky="w", padx=5, pady=5)
+        ttk.Label(self.fps_frame, text="Frames per second:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Entry(self.fps_frame, textvariable=self.fps, width=10).grid(row=0, column=1, sticky="w", padx=5, pady=5)
+
+    def update_input_type(self):
+        """Update UI based on selected input type."""
+        if self.input_type.get() == "video":
+            self.video_frame.grid()
+            self.photos_frame.grid_remove()
+            self.fps_frame.grid()
+        else:
+            self.video_frame.grid_remove()
+            self.photos_frame.grid()
+            self.fps_frame.grid_remove()
+
+    def browse_photos(self):
+        """Allow the user to select multiple photos."""
+        filepaths = filedialog.askopenfilenames(
+            filetypes=[("Image files", "*.jpg *.jpeg *.png"), ("All files", "*.*")]
+        )
+        if filepaths:
+            self.photo_paths = list(filepaths)
+            self.log_message(f"Selected {len(self.photo_paths)} photos.")
+
+    def run_llff(self):
+    output_dir = self.output_dir.get()
+
+    if not output_dir:
+        messagebox.showerror("Error", "Please set an output directory")
+        return
+
+    images_dir = os.path.join(output_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+
+    if self.input_type.get() == "video":
+        # Certifique-se de que os frames foram extraídos
+        if not os.path.exists(images_dir) or not os.listdir(images_dir):
+            messagebox.showerror("Error", "No images found. Extract frames first.")
+            return
+    else:
+        # Copie as fotos selecionadas para o diretório de saída
+        if not self.photo_paths:
+            messagebox.showerror("Error", "No photos selected.")
+            return
+        for photo in self.photo_paths:
+            dest_path = os.path.join(images_dir, os.path.basename(photo))
+            if not os.path.exists(dest_path):
+                os.link(photo, dest_path)
+
+    # Executa o processamento do LLFF
+    def run_llff_processing():
+        try:
+            self.log_message("Running LLFF (COLMAP) processing...")
+            self.progress["value"] = 10
+
+            llff_script = os.path.expanduser("~/LLFF/imgs2poses.py")
+            if not os.path.exists(llff_script):
+                self.log_message(f"Error: LLFF script not found at {llff_script}")
+                self.log_message("Please install LLFF from https://github.com/Fyusion/LLFF")
+                self.progress["value"] = 0
+                return
+
+            cmd = [
+                sys.executable,  # Python executável
+                llff_script,
+                output_dir
+            ]
+
+            self.log_message(f"Running command: {' '.join(cmd)}")
+
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+
+            while process.poll() is None:
+                if self.progress["value"] < 90:
+                    self.progress["value"] += 1
+                self.root.update()
+                self.root.after(1000)
+
+            stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                self.log_message("LLFF processing completed successfully")
+                if os.path.exists(os.path.join(output_dir, "poses_bounds.npy")):
+                    self.log_message("poses_bounds.npy file generated successfully")
+                else:
+                    self.log_message("Warning: poses_bounds.npy file not found")
+                self.progress["value"] = 100
+            else:
+                self.log_message(f"Error during LLFF processing: {stderr.decode()}")
+                self.progress["value"] = 0
+
+        except Exception as e:
+            self.log_message(f"Error: {str(e)}")
+            self.progress["value"] = 0
+
+    threading.Thread(target=run_llff_processing).start()
+>>>>>>> recuperado
         
     def create_process_frame(self):
         frame = ttk.LabelFrame(self.root, text="Processing")
