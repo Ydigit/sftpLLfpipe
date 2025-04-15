@@ -20,10 +20,7 @@ parts/
 sdist/
 var/
 wheels/
-<<<<<<< HEAD
 share/python-wheels/
-=======
->>>>>>> f2564a2 (Primeiro commit do projeto)
 *.egg-info/
 .installed.cfg
 *.egg
